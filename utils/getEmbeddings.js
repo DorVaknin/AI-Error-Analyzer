@@ -1,17 +1,30 @@
-const { Configuration, OpenAIApi } = require('openai');
+const axios = require('axios');
 
 async function getEmbeddings(text) {
-    const configuration = new Configuration({
-        apiKey: process.env.OPENAI_API_KEY, // Add your OpenAI API key here
-    });
+    const apiKey = process.env.AZURE_OPENAI_API_KEY;
+    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+    const instanceName = process.env.AZURE_OPENAI_API_INSTANCE_NAME;
+    const apiVersion = process.env.AZURE_OPENAI_API_VERSION;
+    const endpoint = `https://${instanceName}.openai.azure.com/openai/deployments/${deploymentName}/embeddings?api-version=${apiVersion}`;
 
-    const openai = new OpenAIApi(configuration);
-    const response = await openai.createEmbedding({
-        model: 'text-embedding-ada-002',
-        input: text,
-    });
+    try {
+        const response = await axios.post(endpoint, 
+            {
+                input: text,
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': apiKey,
+                },
+            }
+        );
 
-    return response.data.data[0].embedding;
+        return response.data.data[0].embedding;
+    } catch (error) {
+        console.error('Error getting embeddings:', error);
+        throw error;
+    }
 }
 
 module.exports = getEmbeddings;
