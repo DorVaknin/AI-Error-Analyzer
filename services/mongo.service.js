@@ -18,10 +18,7 @@ class MongoService {
   }
 
   async connect() {
-    const credentials = process.env.MONGO_USERNAME && process.env.MONGO_PASSWORD
-      ? `${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@`
-      : '';
-    const connectionString = `${process.env.MONGO_DIALECT}://${credentials}${process.env.MONGO_HOST}/${process.env.MONGO_DB}`;
+    const connectionString = `${process.env.MONGO_DIALECT}://${process.env.MONGO_HOST}/${process.env.MONGO_DB}`;
     
     await mongoose.connect(connectionString);
     console.log('Connected to MongoDB');
