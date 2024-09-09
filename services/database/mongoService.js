@@ -1,8 +1,9 @@
-const mongoose = require('mongoose');
-const cosineSimilarity = require('compute-cosine-similarity');
-const fs = require('fs');
-const path = require('path');
-const { embeddingService } = require('./embedding.service.js');
+import mongoose from 'mongoose';
+import cosineSimilarity from 'compute-cosine-similarity';
+import fs from 'fs';
+import path from 'path';
+import embeddingService from '../embeddingService.js';
+import llmService from '../llmService.js';
 
 const CodeSnippetSchema = new mongoose.Schema({
   content: { type: String, required: true },
@@ -19,7 +20,6 @@ class MongoService {
 
   async connect() {
     const connectionString = `${process.env.MONGO_DIALECT}://${process.env.MONGO_HOST}/${process.env.MONGO_DB}`;
-    
     await mongoose.connect(connectionString);
     console.log('Connected to MongoDB');
   }
@@ -66,16 +66,16 @@ class MongoService {
   async loadRepositoryIntoMongo(repoPath) {
     const jsFiles = this.getJsFiles(repoPath);
     for (const file of jsFiles) {
-      const functions = this.splitJavaScript(file);
+      const functions = this.splitJavaScript(file.content);
       for (const func of functions) {
-        const description = await embeddingService.generateDescription(func);
+        const description = await llmService.generateDescription(func);
         const embedding = await embeddingService.getEmbeddings(func, description);
         await this.storeEmbedding({ content: func, description, embedding });
       }
     }
     console.log('Repository loaded into MongoDB.');
   }
-
+  
   getJsFiles(dir, files = []) {
     const items = fs.readdirSync(dir);
     for (const item of items) {
@@ -83,20 +83,20 @@ class MongoService {
       if (fs.statSync(fullPath).isDirectory()) {
         this.getJsFiles(fullPath, files);
       } else if (fullPath.endsWith('.js')) {
-        files.push(fullPath);
+        const content = fs.readFileSync(fullPath, 'utf8');
+        files.push({ path: fullPath, content });
       }
     }
     return files;
   }
 
   splitJavaScript(fileContent) {
-    // Implement chunking logic directly here
-    // Return chunks
-    return [fileContent];
+    const functionRegex = /function\s+\w+\s*\([^)]*\)\s*{[^}]*}/g;
+    return fileContent.match(functionRegex) || [];
   }
 
   async analyzeError(errorMessage, relevantSnippets) {
-    return embeddingService.analyzeWithChatGPT4(errorMessage, relevantSnippets);
+    return llmService.analyzeError(errorMessage, relevantSnippets);
   }
 
   async close() {
@@ -104,4 +104,17 @@ class MongoService {
   }
 }
 
-module.exports = new MongoService();
+const mongoService = new MongoService();
+
+export default mongoService;
+export const {
+  connect,
+  storeEmbedding,
+  getRelevantSnippets,
+  reRankSnippets,
+  loadRepositoryIntoMongo,
+  getJsFiles,
+  splitJavaScript,
+  analyzeError,
+  close
+} = mongoService;

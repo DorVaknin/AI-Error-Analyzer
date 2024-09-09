@@ -1,5 +1,5 @@
-const { getEmbeddings, analyzeWithChatGPT4 } = require('../services/embedding.service');
-const { getRelevantSnippets } = require('../services/pgvector.service');
+import EmbeddingService from '../services/EmbeddingService.js';
+import mongoService from '../services/database/mongoService.js';
 
 class RollbarController {
   async handleWebhook(req, res) {
@@ -8,13 +8,13 @@ class RollbarController {
       const errorMessage = payload.data.body.trace.exception.message;
 
       // Get the embedding of the error message
-      const errorEmbedding = await getEmbeddings(errorMessage);
+      const errorEmbedding = await EmbeddingService.getEmbeddings(errorMessage);
 
-      // Perform a semantic search using pgvector
-      const relevantSnippets = await getRelevantSnippets(errorEmbedding);
+      // Perform a semantic search using MongoDB
+      const relevantSnippets = await mongoService.getRelevantSnippets(errorEmbedding);
 
       // Analyze the error and relevant snippets with GPT-4
-      const gptResponse = await analyzeWithChatGPT4(errorMessage, relevantSnippets);
+      const gptResponse = await mongoService.analyzeError(errorMessage, relevantSnippets);
 
       res.status(200).json({
         message: 'Webhook processed successfully',
@@ -28,4 +28,4 @@ class RollbarController {
   }
 }
 
-module.exports = new RollbarController();
+export default new RollbarController();
