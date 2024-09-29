@@ -12,7 +12,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 // import rollbarRoutes from './routes/rollbarRoutes.js';
 import vectorService from './services/database/vectorService.js';
-import embeddingService from './services/EmbeddingService.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
